@@ -315,31 +315,46 @@ function setTab(t) {
   } else { buildFilters(); renderLog(); }
 }
 
+let filesProcessing = 0;
+
 function handleFiles(files) {
   Array.from(files).forEach(file => {
     const chip = addFileChip(file.name);
+    filesProcessing++;
+    updateSendBtn();
+
     if (file.type.startsWith('image/')) {
-      // Compress image before encoding to stay under Netlify 6MB limit
       const img = new Image();
       const reader = new FileReader();
       reader.onload = (e) => {
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX = 1024;
-          let w = img.width, h = img.height;
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
+          try {
+            const canvas = document.createElement('canvas');
+            const MAX = 1024;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+              if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+              else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const compressed = canvas.toDataURL('image/jpeg', 0.8);
+            const base64 = compressed.split(',')[1];
+            attachedFiles.push({ name: file.name, base64, mediaType: 'image/jpeg', type: 'image' });
+            chip.classList.add('ready');
+          } catch(err) {
+            // fallback: use original without compression
+            const base64 = e.target.result.split(',')[1];
+            attachedFiles.push({ name: file.name, base64, mediaType: file.type, type: 'image' });
+            chip.classList.add('ready');
           }
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          const compressed = canvas.toDataURL('image/jpeg', 0.8);
-          const base64 = compressed.split(',')[1];
-          attachedFiles.push({ name: file.name, base64, mediaType: 'image/jpeg', type: 'image' });
-          chip.classList.add('ready');
+          filesProcessing--;
+          updateSendBtn();
         };
+        img.onerror = () => { filesProcessing--; updateSendBtn(); chip.remove(); };
         img.src = e.target.result;
       };
+      reader.onerror = () => { filesProcessing--; updateSendBtn(); chip.remove(); };
       reader.readAsDataURL(file);
     } else {
       const reader = new FileReader();
@@ -347,11 +362,29 @@ function handleFiles(files) {
         const base64 = e.target.result.split(',')[1];
         attachedFiles.push({ name: file.name, base64, mediaType: file.type, type: 'document' });
         chip.classList.add('ready');
+        filesProcessing--;
+        updateSendBtn();
       };
+      reader.onerror = () => { filesProcessing--; updateSendBtn(); chip.remove(); };
       reader.readAsDataURL(file);
     }
   });
   document.getElementById('file-input').value = '';
+}
+
+function updateSendBtn() {
+  const btn = document.getElementById('send');
+  if (!btn) return;
+  // Disable only during API call, not during file processing
+  btn.disabled = loading;
+  // Show processing state on button
+  if (filesProcessing > 0) {
+    btn.style.opacity = '0.6';
+    btn.title = 'Processing file...';
+  } else {
+    btn.style.opacity = loading ? '0.3' : '1';
+    btn.title = 'Send';
+  }
 }
 
 function addFileChip(name) {
@@ -454,7 +487,7 @@ async function poiSend() {
 
   history[tab].push({ role: 'user', content: userContent });
   loading = true;
-  document.getElementById('send').disabled = true;
+  updateSendBtn();
   renderChat(); showLoader();
 
   const apiMessages = history[tab].map(m => ({
@@ -478,7 +511,7 @@ async function poiSend() {
   const loader = document.getElementById('loader');
   if (loader) loader.remove();
   loading = false;
-  document.getElementById('send').disabled = false;
+  updateSendBtn();
   attachedFiles = [];
   document.getElementById('file-list').innerHTML = '';
   document.getElementById('file-preview').style.display = 'none';
