@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -140,13 +141,27 @@ body::after {
 </style>
 </head>
 <body>
-<div id="app">
+<!-- PASSWORD GATE -->
+<div id="gate" style="width:100%;max-width:480px;position:relative;z-index:1;animation:fadeIn 0.6s ease forwards;">
+  <div style="border:1px solid #2E2E2E;border-radius:2px;background:#111111;padding:40px;box-shadow:0 0 0 1px rgba(232,0,125,0.08),0 32px 80px rgba(0,0,0,0.8);">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:6px;color:#E8007D;line-height:1;text-shadow:0 0 30px rgba(232,0,125,0.4);margin-bottom:6px">POI</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:#4A4845;text-transform:uppercase;margin-bottom:32px">Alab MNL · Conviction AI · Beta</div>
+    <div style="font-size:11px;color:#888480;font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Access Password</div>
+    <div id="gate-error" style="display:none;font-size:11px;color:#E8007D;font-family:'DM Mono',monospace;letter-spacing:0.5px;margin-bottom:8px">Wrong password — please try again.</div>
+    <input id="gate-input" type="password" placeholder="Enter password..." autocomplete="off" spellcheck="false"
+      style="width:100%;padding:11px 13px;font-size:13px;border:1px solid #2E2E2E;border-radius:1px;background:#181818;color:#F5F3EF;font-family:'DM Mono',monospace;letter-spacing:1px;margin-bottom:10px;box-sizing:border-box;transition:border-color 0.15s;">
+    <button onclick="unlock()" style="width:100%;padding:12px;border:none;background:#E8007D;color:#F5F3EF;font-size:12px;font-family:'DM Mono',monospace;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:1px;font-weight:600;">Ignite Poi &#x279C;</button>
+    <div style="font-size:10px;color:#4A4845;font-family:'DM Mono',monospace;letter-spacing:0.5px;margin-top:16px;line-height:1.6;text-align:center;">For Alab MNL internal use only.<br>Session only — cleared on close.</div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
   <div id="header">
     <div id="header-top">
       <div id="brand">
         <div id="brand-mark">POI</div>
         <div id="brand-divider"></div>
-        <div id="brand-name">Alab MNL · Strategic AI</div>
+        <div id="brand-name">Alab MNL · Conviction AI</div>
       </div>
       <div id="header-controls">
         <div class="badge badge-fire">Beta</div>
@@ -198,8 +213,32 @@ body::after {
     <span class="footer-right">The dancer controls the fire</span>
   </div>
 </div>
+</div>
 
 <script>
+function unlock() {
+  const input = document.getElementById('gate-input').value.trim();
+  if (input !== 'AIL@b2026') {
+    document.getElementById('gate-error').style.display = 'block';
+    document.getElementById('gate-input').value = '';
+    return;
+  }
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  buildStageSelect();
+  updateCount();
+  setTab('stress');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const gateInput = document.getElementById('gate-input');
+  if (gateInput) {
+    gateInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') unlock();
+    });
+  }
+});
+
 const STAGES = [
   { id:'briefing',   label:'Briefing',            short:'BR', bg:'rgba(232,0,125,0.1)',  border:'rgba(232,0,125,0.4)',  text:'#FF1A8C' },
   { id:'strategy',   label:'Strategy',             short:'ST', bg:'rgba(139,63,212,0.1)', border:'rgba(139,63,212,0.4)', text:'#B47FE8' },
@@ -484,7 +523,7 @@ document.getElementById('inp').addEventListener('input', function () {
   this.style.height = Math.min(this.scrollHeight, 100) + 'px';
 });
 
-buildStageSelect(); updateCount(); setTab('stress');
+// initialized via unlock()
 </script>
 </body>
 </html>
